@@ -7,7 +7,7 @@ class DataParser(BaseDataParser):
     def __init__(self):
         super().__init__()
 
-    def parse(self, file):
+    def parse(self, file) -> list:
         markets = []
         with bz2.open(file, 'rt') as f:
             for line in f:

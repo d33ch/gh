@@ -1,5 +1,5 @@
 from betfair_data import bflw
-from base_data_filter import BaseMarketFilter
+from base_market_filter import BaseMarketFilter
 from models.market_info import MarketInfo
 
 class MarketFilter(BaseMarketFilter):
