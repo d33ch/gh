@@ -1,6 +1,6 @@
 
 import bz2
-from base_data_parser import BaseDataParser
+from base.base_data_parser import BaseDataParser
 
 
 class DataParser(BaseDataParser):

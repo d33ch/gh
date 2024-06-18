@@ -2,7 +2,7 @@ from bz2 import BZ2File
 import bz2
 import os
 import tarfile
-from base_loader import BaseLoader
+from base.base_loader import BaseLoader
 
 
 class TarLoader(BaseLoader):
@@ -15,7 +15,6 @@ class TarLoader(BaseLoader):
             if os.path.isfile(file_path) and ext == '.tar':
                 with tarfile.TarFile(file_path) as archive:
                     for file in archive:
-                        print(file.name)
                         extracted = archive.extractfile(file)
                         if extracted is not None:
                             yield bz2.open(extracted)
