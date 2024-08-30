@@ -12,7 +12,7 @@ class TarLoader(BaseLoader):
     def load(self, file_path: str) -> BZ2File:
         try:
             ext = os.path.splitext(file_path)[1]
-            if os.path.isfile(file_path) and ext == '.tar':
+            if os.path.isfile(file_path) and ext == ".tar":
                 with tarfile.TarFile(file_path) as archive:
                     for file in archive:
                         extracted = archive.extractfile(file)

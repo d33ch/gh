@@ -1,4 +1,3 @@
-
 import bz2
 from base.base_data_parser import BaseDataParser
 
