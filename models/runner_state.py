@@ -1,25 +1,20 @@
+import datetime
 from models.price_ladder import PriceLadder
 
 
 class RunnerState:
-    def __init__(
-        self,
-        runner_id: str,
-        traded_volume: float,
-        wap: float,
-        ltp: float,
-        status: str,
-        bet_ladder: PriceLadder,
-        lay_ladder: PriceLadder,
-        sp_near: float,
-        sp_far: float,
-    ):
-        self.runner_id = runner_id
-        self.traded_volume = traded_volume
-        self.wap = wap
-        self.ltp = ltp
-        self.status = status
-        self.bet_ladder = bet_ladder
-        self.lay_ladder = lay_ladder
-        self.sp_near = sp_near
-        self.sp_far = sp_far
+    runner_id: str
+    adjustment_factor: float
+    bet_ladder: PriceLadder
+    handicap: float
+    last_price_traded: float
+    lay_ladder: PriceLadder
+    removal_date: datetime
+    runner_id: int
+    sp_actual: float
+    sp_near: float
+    sp_far: float
+    status: str
+    traded_volume: float
+    total_matched: float
+    wap: float
