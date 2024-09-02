@@ -14,8 +14,8 @@ class Market:
     market_id: str
     name: str
     venue: str
-    runners: List[Runner]
-    market_states: List[MarketState]
+    runners: List[Runner] = []
+    market_states: List[MarketState] = []
     market_base_rate: float
     market_time: datetime
     market_type: str

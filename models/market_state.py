@@ -17,6 +17,6 @@ class MarketState:
     publish_time_epoch: int
     publish_time: datetime
     status: str
-    runners_states: List[RunnerState]
+    runners_states: List[RunnerState] = []
     total_available: float
     total_matched: float

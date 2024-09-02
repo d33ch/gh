@@ -1,5 +1,6 @@
-from injector import Module, provider
+from injector import Module, provider, singleton
 
+from repository_factory import RepositoryFactory
 from base.base_market_parser import BaseMarketParser
 
 # from base_data_utils import BaseDataUtils
@@ -21,3 +22,8 @@ class ProcessorModule(Module):
         binder.bind(BaseMarketFilter, to=MarketFilter)
         # binder.bind(BaseDataUtils, to=DataUtils)
         binder.bind(Processor)
+
+    @singleton
+    @provider
+    def provide_repository_factory(self) -> RepositoryFactory:
+        return RepositoryFactory()

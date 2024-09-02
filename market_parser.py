@@ -32,6 +32,7 @@ class MarketParser(BaseMarketParser):
         market.settled_time = market_book.market_definition.settled_time
         market.suspend_time = market_book.market_definition.suspend_time
         market.timezone = market_book.market_definition.timezone
+        return market
 
     def parse_market_state(self, market_book: bflw.MarketBook) -> MarketState:
         market_state = MarketState()
@@ -56,7 +57,7 @@ class MarketParser(BaseMarketParser):
         return PriceLadder([LadderPosition(position.price, position.size)] for position in ladder[:depth])
 
     def parse_runners(self, market_runners: List[bflw.RunnerBook]) -> List[RunnerState]:
-        runners_states = [RunnerState]
+        runners_states: List[RunnerState] = []
         for runner in market_runners:
             try:
                 traded_volume = sum([traded.size for traded in runner.ex.traded_volume])

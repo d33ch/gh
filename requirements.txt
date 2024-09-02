@@ -1,0 +1,4 @@
+betfair_data==0.3.4
+betfairlightweight==2.20.2
+pymongo==4.3.3
+injector==0.20.1
