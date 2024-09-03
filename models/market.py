@@ -14,8 +14,8 @@ class Market:
     market_id: str
     name: str
     venue: str
-    runners: List[Runner] = []
-    market_states: List[MarketState] = []
+    runners: List[Runner]
+    market_states: List[MarketState]
     market_base_rate: float
     market_time: datetime
     market_type: str
@@ -25,3 +25,14 @@ class Market:
     settled_time: datetime
     suspend_time: datetime
     timezone: str
+
+    def __init__(self):
+        self.runners = []
+        self.market_states = []
+
+    def to_dict(self):
+        return {
+            **self.__dict__,
+            "runners": [r.__dict__ for r in self.runners],
+            "market_states": [market_state.to_dict() for market_state in self.market_states],
+        }

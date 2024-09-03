@@ -1,4 +1,8 @@
+import datetime
+from bson import ObjectId
 from models.market import Market
+from models.market_state import MarketState
+from models.runner import Runner
 
 
 class Repository:
@@ -6,5 +10,6 @@ class Repository:
         self.collection = collection
 
     def add(self, data) -> str:
-        result = self.collection.insert_one(data)
+        data_dict = data.to_dict()
+        result = self.collection.insert_one(data_dict)
         return str(result.inserted_id)

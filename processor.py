@@ -25,7 +25,7 @@ class Processor:
         self.filter = filter
         self.loader = loader
         self.parser = parser
-        self.market_repository = repository_factory.create_repository("market")
+        self.market_repository = repository_factory.create_repository("markets")
 
     def process(self, file, config: ProcessorConfig):
         file_paths = self.loader.load(file)
@@ -39,6 +39,7 @@ class Processor:
                 generator = stream.get_generator()
                 last_consumed_time = None
                 market_id = None
+                market = None
                 for market_books in generator():
                     if len(market_books) > 1:
                         raise Exception("More than one market book in a single market")
@@ -51,8 +52,6 @@ class Processor:
                         market_id = market_book.market_id
                         last_consumed_time = market_book.publish_time
                         market = self.parser.parse_market_info(market_book)
-                        # result = self.market_repository.add(market)
-                        markets.append(market)
 
                     if not self.filter.filter_time(market_book.market_definition.market_time, market_book.publish_time, last_consumed_time, config.steps):
                         continue
@@ -60,4 +59,7 @@ class Processor:
                     market_state = self.parser.parse_market_state(market_book)
                     market.market_states.append(market_state)
                     last_consumed_time = market_book.publish_time
-                print(len(markets))
+
+                if market != None and len(market.market_states) > 0:
+                    result = self.market_repository.add(market)
+                    print(f"added {result}")

@@ -1,14 +1,16 @@
 import datetime
-from models.price_ladder import PriceLadder
+from typing import List
+from models.ladder_position import LadderPosition
 
 
 class RunnerState:
     runner_id: str
+    name: str
     adjustment_factor: float
-    bet_ladder: PriceLadder
+    back_ladder: List[LadderPosition]
     handicap: float
     last_price_traded: float
-    lay_ladder: PriceLadder
+    lay_ladder: List[LadderPosition]
     removal_date: datetime
     runner_id: int
     sp_actual: float
@@ -18,3 +20,10 @@ class RunnerState:
     traded_volume: float
     total_matched: float
     wap: float
+
+    def to_dict(self):
+        return {
+            **self.__dict__,
+            "back_ladder": [p.__dict__ for p in self.back_ladder],
+            "lay_ladder": [p.__dict__ for p in self.lay_ladder],
+        }

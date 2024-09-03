@@ -5,7 +5,7 @@ from base.base_market_parser import BaseMarketParser
 from models.ladder_position import LadderPosition
 from models.market import Market
 from models.market_state import MarketState
-from models.price_ladder import PriceLadder
+from models.runner import Runner
 from models.runner_state import RunnerState
 
 
@@ -29,34 +29,37 @@ class MarketParser(BaseMarketParser):
         market.open_date = market_book.market_definition.open_date
         market.race_type = market_book.market_definition.race_type
         market.regulators = market_book.market_definition.regulators
+        market.runners = self.parse_runners(market_book.market_definition.runners)
         market.settled_time = market_book.market_definition.settled_time
         market.suspend_time = market_book.market_definition.suspend_time
         market.timezone = market_book.market_definition.timezone
+
         return market
 
     def parse_market_state(self, market_book: bflw.MarketBook) -> MarketState:
         market_state = MarketState()
         market_state.market_id = market_book.market_id
         market_state.bsp_reconciled = market_book.bsp_reconciled
-        market_state.complete = market_book.complete
         market_state.inplay = market_book.inplay
-        market_state.last_match_time = market_book.last_match_time
         market_state.number_of_active_runners = market_book.number_of_active_runners
         market_state.number_of_runners = market_book.number_of_runners
         market_state.number_of_winners = market_book.number_of_active_runners
         market_state.publish_time_epoch = market_book.publish_time_epoch
         market_state.publish_time = market_book.publish_time
-        market_state.runners_states = self.parse_runners(market_book.runners)
+        market_state.runners_states = self.parse_runners_states(market_book.runners)
         market_state.status = market_book.status
         market_state.total_available = market_book.total_available
         market_state.total_matched = market_book.total_matched
 
         return market_state
 
-    def parse_ladder(self, ladder: List[PriceSize], depth=5) -> PriceLadder:
-        return PriceLadder([LadderPosition(position.price, position.size)] for position in ladder[:depth])
+    def parse_ladder(self, ladder: List[PriceSize], depth=5) -> List[LadderPosition]:
+        return [LadderPosition(position.price, position.size) for position in ladder[:depth]]
 
-    def parse_runners(self, market_runners: List[bflw.RunnerBook]) -> List[RunnerState]:
+    def parse_runners(self, market_runners: List[bflw.MarketDefinitionRunner]) -> List[Runner]:
+        return [Runner(market_runner.selection_id, market_runner.name, market_runner.handicap, market_runner.removal_date) for market_runner in market_runners]
+
+    def parse_runners_states(self, market_runners: List[bflw.RunnerBook]) -> List[RunnerState]:
         runners_states: List[RunnerState] = []
         for runner in market_runners:
             try:
