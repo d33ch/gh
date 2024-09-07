@@ -7,8 +7,8 @@ from injector import inject
 import betfairlightweight
 from betfairlightweight import StreamListener
 from unittest.mock import patch
-from models.market import Market
-from models.processor_config import ProcessorConfig
+from dtos.market import Market
+from dtos.processor_config import ProcessorConfig
 from repository import Repository
 
 

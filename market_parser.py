@@ -2,11 +2,11 @@ import bz2
 from betfair_data import bflw, PriceSize
 from typing import List
 from base.base_market_parser import BaseMarketParser
-from models.ladder_position import LadderPosition
-from models.market import Market
-from models.market_state import MarketState
-from models.runner import Runner
-from models.runner_state import RunnerState
+from dtos.ladder_position import LadderPosition
+from dtos.market import Market
+from dtos.market_state import MarketState
+from dtos.runner import Runner
+from dtos.runner_state import RunnerState
 
 
 class MarketParser(BaseMarketParser):

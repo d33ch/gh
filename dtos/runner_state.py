@@ -1,6 +1,6 @@
 import datetime
 from typing import List
-from models.ladder_position import LadderPosition
+from dtos.ladder_position import LadderPosition
 
 
 class RunnerState:

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 
-from models.runner_state import RunnerState
+from dtos.runner_state import RunnerState
 
 
 class MarketState:

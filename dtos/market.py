@@ -1,8 +1,8 @@
 import datetime
 from typing import List
 
-from models.market_state import MarketState
-from models.runner import Runner
+from dtos.market_state import MarketState
+from dtos.runner import Runner
 
 
 class Market:

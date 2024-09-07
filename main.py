@@ -1,5 +1,5 @@
 from injector import Injector
-from models.processor_config import ProcessorConfig
+from dtos.processor_config import ProcessorConfig
 from modules import ProcessorModule
 from processor import Processor
 

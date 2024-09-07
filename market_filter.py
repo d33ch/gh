@@ -2,8 +2,8 @@ import datetime
 from typing import List, Tuple
 from betfair_data import bflw
 from base.base_market_filter import BaseMarketFilter
-from models.market_info import MarketInfo
-from models.processor_config import ProcessorConfig
+from dtos.market_info import MarketInfo
+from dtos.processor_config import ProcessorConfig
 
 
 def get_step(steps: List[Tuple[int, int]], time: int) -> Tuple[int, int]:
@@ -18,10 +18,12 @@ class MarketFilter(BaseMarketFilter):
     # TODO: to pass filter config
     def filter_market(self, market_book: bflw.MarketBook) -> bool:
         definition = market_book.market_definition
+        date = f"{definition.market_time.year}-{definition.market_time.month}-{definition.market_time.day}"
         return (
             definition != None
             and definition.country_code == "AU"
             and definition.market_type == "WIN"
+            and date == "2016-9-21"
             # and (race_type := MarketInfo(definition.name).race_type) != "trot"
             # and race_type != "pace"
         )
