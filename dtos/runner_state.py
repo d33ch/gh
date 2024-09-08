@@ -1,11 +1,11 @@
+from dataclasses import dataclass
 import datetime
 from typing import List
 from dtos.ladder_position import LadderPosition
 
 
+@dataclass
 class RunnerState:
-    runner_id: str
-    name: str
     adjustment_factor: float
     back_ladder: List[LadderPosition]
     handicap: float
@@ -19,7 +19,6 @@ class RunnerState:
     status: str
     traded_volume: float
     total_matched: float
-    wap: float
 
     def to_dict(self):
         return {

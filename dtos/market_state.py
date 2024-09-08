@@ -1,9 +1,11 @@
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
 
 from dtos.runner_state import RunnerState
 
 
+@dataclass
 class MarketState:
     market_id: str
     bsp_reconciled: bool
@@ -14,12 +16,9 @@ class MarketState:
     publish_time_epoch: int
     publish_time: datetime
     status: str
-    runners_states: List[RunnerState]
     total_available: float
     total_matched: float
-
-    def __init__(self):
-        self.runners_states = []
+    runners_states: List[RunnerState] = field(default_factory=list)
 
     def to_dict(self):
         return {**self.__dict__, "runners_states": [rs.to_dict() for rs in self.runners_states]}

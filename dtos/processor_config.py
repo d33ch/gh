@@ -1,8 +1,7 @@
+from dataclasses import dataclass
 from typing import List, Tuple
 
 
+@dataclass
 class ProcessorConfig:
     steps: List[Tuple[int, int]]
-
-    def __init__(self, steps: List[Tuple[int, int]]):
-        self.steps = steps

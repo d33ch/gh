@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 import datetime
 from typing import List
 
@@ -5,17 +6,16 @@ from dtos.market_state import MarketState
 from dtos.runner import Runner
 
 
+@dataclass
 class Market:
     betting_type: str
     country_code: str
     event_name: str
-    event_type_id: str
     event_id: str
+    event_type_id: str
     market_id: str
     name: str
     venue: str
-    runners: List[Runner]
-    market_states: List[MarketState]
     market_base_rate: float
     market_time: datetime
     market_type: str
@@ -25,10 +25,8 @@ class Market:
     settled_time: datetime
     suspend_time: datetime
     timezone: str
-
-    def __init__(self):
-        self.runners = []
-        self.market_states = []
+    runners: List[Runner] = field(default_factory=list)
+    market_states: List[MarketState] = field(default_factory=list)
 
     def to_dict(self):
         return {
