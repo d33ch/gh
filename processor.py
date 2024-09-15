@@ -61,5 +61,5 @@ class Processor:
                     last_consumed_time = market_book.publish_time
 
                 if market != None and len(market.market_states) > 0:
-                    result = self.market_repository.add(market)
+                    result = self.market_repository.insert(market)
                     print(f"added {result}")

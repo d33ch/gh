@@ -7,7 +7,7 @@ class TopazClient:
         self.api_key = api_key
         self.topaz_api = TopazAPI(api_key)
 
-    def races(self, from_date, to_date, code):
+    def get_races(self, from_date, to_date, code):
         try:
             races = self.topaz_api.get_races(from_date=from_date, to_date=to_date, owning_authority_code=code)
             return races.to_json(orient="records")
@@ -18,15 +18,15 @@ class TopazClient:
             else:
                 print(f"Error: {from_date} {code}")
 
-    def race_runs(self, race_id):
+    def get_race_runs(self, race_id):
         runs = self.topaz_api.get_race_runs(race_id)
         return runs.to_json(orient="records")
 
-    def race_runs_form(self, race_id):
+    def get_race_runs_form(self, race_id):
         form = self.topaz_api.get_race_runs_form(race_id)
         return json.dumps(form)
 
-    def race_result(self, race_id):
+    def get_race_result(self, race_id):
         result = self.topaz_api.get_race_result(race_id)
         return json.dumps(result)
 
