@@ -8,15 +8,8 @@ class TopazClient:
         self.topaz_api = TopazAPI(api_key)
 
     def get_races(self, from_date, to_date, code):
-        try:
-            races = self.topaz_api.get_races(from_date=from_date, to_date=to_date, owning_authority_code=code)
-            return races.to_json(orient="records")
-        except Exception as e:
-            if e.response.status_code == 404:
-                print(f"Error 404 not found: {from_date} {code}")
-                return None
-            else:
-                print(f"Error: {from_date} {code}")
+        races = self.topaz_api.get_races(from_date=from_date, to_date=to_date, owning_authority_code=code)
+        return races.to_json(orient="records")
 
     def get_race_runs(self, race_id):
         runs = self.topaz_api.get_race_runs(race_id)
