@@ -1,4 +1,8 @@
 betfair_data==0.3.4
 betfairlightweight==2.20.2
-pymongo==4.3.3
 injector==0.20.1
+numpy==1.25.0
+pymongo==4.3.3
+pandas==2.2.2
+scikit-learn==1.2.2
+fastai==2.7.17
