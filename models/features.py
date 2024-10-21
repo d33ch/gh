@@ -11,19 +11,19 @@ RACE_FEATURES = [
 ]
 
 RUN_FEATURES = [
+    "run_age",
     "run_trackCode",
     "run_dogId",
     "run_weightInKg",
     "run_incomingGrade",
-    "run_outgoingGrade",
-    "run_gradedTo",
+    # "run_gradedTo",
     "run_rating",
     "run_boxNumber",
     "run_runId",
     "run_rugNumber",
     "run_startPrice",
-    "run_scratched",
-    "run_isLateScratching",
+    # "run_scratched",
+    # "run_isLateScratching",
     "run_colourCode",
     "run_sex",
     "run_ownerId",

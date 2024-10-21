@@ -33,7 +33,7 @@ class Utils:
         if value is None:
             return -1
         if isinstance(value, str):
-            # Use regular expression to find all numbers (including decimal point)
+            # Find all numbers (including decimal point)
             match = re.search(r"\d+\.?\d*", value)
             if match:
                 return float(match.group())
@@ -89,3 +89,7 @@ class Utils:
         if math.isnan(boxNumber):
             return value
         return boxNumber
+
+    @staticmethod
+    def calculate_dog_age(race_date, date_whelped):
+        return (race_date - date_whelped).dt.days

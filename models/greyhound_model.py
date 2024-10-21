@@ -22,8 +22,8 @@ class GreyhoundModel:
         )
         self.evaluator = ModelEvaluator()
 
-    def preprocess(self, df):
-        return self.preprocessor_pipeline.fit_transform(df)
+    def preprocess(self, races):
+        return self.preprocessor_pipeline.fit_transform(races)
 
     def fit(self, X, y):
         self.model_pipeline.fit(X, y)

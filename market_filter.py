@@ -23,12 +23,14 @@ class MarketFilter(BaseMarketFilter):
             definition != None
             and definition.country_code == "AU"
             and definition.market_type == "WIN"
-            and date == "2016-9-21"
+            # and date == "2016-9-21"
             # and (race_type := MarketInfo(definition.name).race_type) != "trot"
             # and race_type != "pace"
         )
 
-    def filter_time(self, market_time: datetime, publish_time: datetime, last_consumed_time: datetime, steps: List[Tuple[int, int]]) -> bool:
+    def filter_time(
+        self, market_time: datetime, publish_time: datetime, last_consumed_time: datetime, steps: List[Tuple[int, int]]
+    ) -> bool:
         seconds_to_start = (market_time - publish_time).total_seconds()
         step = get_step(steps, seconds_to_start)
         if seconds_to_start > step[0]:
