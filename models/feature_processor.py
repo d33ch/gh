@@ -1,3 +1,5 @@
+import math
+from numbers import Number
 import pandas as pd
 import numpy as np
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -11,39 +13,43 @@ class Direction(Enum):
     LATE = "late"
 
 
-class FeatureExtractor(BaseEstimator, TransformerMixin):
+class FeatureProcessor(BaseEstimator, TransformerMixin):
     def __init__(self):
         self.features = ALL_FEATURES
 
     def fit(self, X, y=None):
         return self
 
-    def safe_concat(dfs):
-        dfs = [df.dropna(axis=1, how="all") for df in dfs if not df.empty]
-        return pd.concat(dfs, ignore_index=True)
-
     def transform(self, races):
-        final_df = pd.DataFrame()
-
+        results = []
         for race_data in races:
             race_df = race_data["race_df"]
             runs_df = race_data["runs_df"]
             form_df = race_data["form_df"]
-            track_code = runs_df["trackCode"][0]
-            track_distance = runs_df["distance"][0]
+            stats_df = race_data["stats_df"]
+            track_code = runs_df["trackCode"].iloc[0]
+            track_distance = runs_df["distance"].iloc[0]
             box_numbers_df = runs_df[["dogId", "boxNumber"]]
             whelped_dates_df = runs_df[["dogId", "dateWhelped"]]
             race_date = pd.to_datetime(race_df.loc[0, "raceStart"])
-            dog_features = self.calculate_dog_performance_features(
+            race_id = race_df.loc[0, "raceId"]
+            # if race_id == 1907280165:
+            # print(race_id)  #
+            auth_code = race_df.loc[0, "owningAuthorityCode"]
+            dog_features = self.extract_performance_features(
                 form_df, box_numbers_df, whelped_dates_df, track_code, track_distance, race_date
             )
-            runs_features = self.calculate_race_features(runs_df)
-            result_df = pd.merge(runs_features, dog_features, on="dogId", how="left")
-            final_df = pd.concat([final_df, result_df], ignore_index=True)
-        return final_df
+            run_features = self.extract_run_features(runs_df)
+            result_df = pd.merge(run_features, dog_features, on="dogId", how="left")
+            result_df = result_df.merge(stats_df, on="dogId", how="left")
+            result_df["auth_code"] = auth_code
 
-    def calculate_race_features(self, race_df):
-        return race_df[
+            results.append(result_df)
+        return pd.DataFrame([row for df in results for _, row in df.iterrows()])
+
+    def extract_run_features(self, run_df):
+        run_df.loc[run_df["unplacedCode"].notna(), "place"] = run_df["unplacedCode"].apply(self.encode_race_result)
+        return run_df[
             [
                 "dogId",
                 "trackCode",
@@ -53,6 +59,7 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
                 "raceTypeCode",
                 "runId",
                 "weightInKg",
+                "careerPrizeMoney",
                 "incomingGrade",
                 "rating",
                 "raceNumber",
@@ -60,10 +67,9 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
                 "rugNumber",
                 "startPrice",
                 "place",
-                "scratched",
+                "unplacedCode",
                 "prizeMoney",
                 "resultTime",
-                "resultMargin",
                 "sex",
                 "ownerId",
                 "trainerId",
@@ -102,6 +108,9 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
             "track_distance_best_time_last_5": (
                 track_distance_df_filtered["resultTime"].min() if track_distance_num_races > 0 else float("inf")
             ),
+            "track_distance_worst_time_last_5": (
+                track_distance_df_filtered["resultTime"].max() if track_distance_num_races > 0 else float("inf")
+            ),
             "distance_num_races_last_5": distance_num_races,
             "distance_wins_last_5": (distance_df_filtered["place"] == 1).sum(),
             "distance_win_rate_last_5": round(
@@ -119,6 +128,9 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
             ),
             "distance_best_time_last_5": (
                 distance_df_filtered["resultTime"].min() if distance_num_races > 0 else float("inf")
+            ),
+            "distance_worst_time_last_5": (
+                distance_df_filtered["resultTime"].max() if distance_num_races > 0 else float("inf")
             ),
         }
         return pd.Series(track_features)
@@ -169,9 +181,10 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
         }
         return pd.Series(rating_features)
 
-    def calculate_dog_performance_features(self, form_df, box_numbers_df, whelped_dates_df, track, distance, race_date):
+    def extract_performance_features(self, form_df, box_numbers_df, whelped_dates_df, track, distance, race_date):
         form_df["pir_with_place"] = form_df["pir"].fillna("") + form_df["place"].astype(str).fillna("")
         form_df["meetingDate"] = pd.to_datetime(form_df["meetingDate"])
+        form_df["place"] = form_df["place"].apply(self.encode_race_result)
         form_df_sorted = form_df.sort_values(["dogId", "meetingDate"], ascending=[True, False])
         form_df_sorted["speed"] = form_df_sorted["distance"] / form_df_sorted["resultTime"]
         form_df_sorted["time_per_100m"] = (form_df_sorted["resultTime"] / form_df_sorted["distance"]) * 100
@@ -181,17 +194,17 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
         track_features = self.calculate_track_distance_features(form_df_group, track, distance)
         box_features = self.calculate_box_features(form_df_group, box_numbers_df)
         dog_features = self.calculate_dog_features(form_df_group, whelped_dates_df, race_date)
-        features = {
-            "avg_speed_last_5": lambda x: round(x.mean(), 2),
-            "max_speed_last_5": lambda x: x.max(),
-            "min_speed_last_5": lambda x: x.min(),
-            "avg_time_per_100m_last_5": lambda x: x.head(5).mean(),
-            "min_time_per_100m_last_5": lambda x: x.head(5).min(),
-            "max_time_per_100m_last_5": lambda x: x.head(5).max(),
-            "avg_odds_last_5": lambda x: x.head(5).mean(),
-            "avg_prize_last_5": lambda x: x.head(5).mean(),
-            "total_prize_last_5": lambda x: x.head(5).sum(),
-        }
+        # features = {
+        #     "avg_speed_last_5": lambda x: round(x.mean(), 2),
+        #     "max_speed_last_5": lambda x: x.max(),
+        #     "min_speed_last_5": lambda x: x.min(),
+        #     "avg_time_per_100m_last_5": lambda x: x.head(5).mean(),
+        #     "min_time_per_100m_last_5": lambda x: x.head(5).min(),
+        #     "max_time_per_100m_last_5": lambda x: x.head(5).max(),
+        #     "avg_odds_last_5": lambda x: x.head(5).mean(),
+        #     "avg_prize_last_5": lambda x: x.head(5).mean(),
+        #     "total_prize_last_5": lambda x: x.head(5).sum(),
+        # }
         features = pd.merge(result_features, track_features, on="dogId", how="left")
         features = pd.merge(features, box_features, on="dogId", how="left")
         features = pd.merge(features, dog_features, on="dogId", how="left")
@@ -455,6 +468,8 @@ class FeatureExtractor(BaseEstimator, TransformerMixin):
         return [self.encode_race_result(i) for i in list(x) if i][::-1]
 
     def encode_race_result(self, result):
-        if result.isdigit():
+        if isinstance(result, Number) and not math.isnan(result):
+            return result
+        if isinstance(result, str) and result.isdigit():
             return int(result)
-        return 9
+        return 10

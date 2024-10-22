@@ -1,14 +1,10 @@
 import pandas as pd
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.calibration import LabelEncoder
 from fastai.tabular.core import add_datepart
 from utils import Utils
 
 
 class DataPreprocessor(BaseEstimator, TransformerMixin):
-    def __init__(self):
-        self.le = LabelEncoder()
-
     def fit(self, X, y=None):
         return self
 
@@ -31,31 +27,40 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         race_info["_id"] = str(race_info["_id"])
         return race_info
 
-    def process_runs(self, runs, race_id):
+    def process_runs(self, runs):
         processed_runs = []
-        for run in runs:
-            run_info = run.copy()
-            run_info["raceId"] = race_id
-            processed_runs.append(run_info)
+        filtered = [run for run in runs if run.get("boxNumber") is not None]
+        for run in filtered:
+            processed_runs.append(run)
         return processed_runs
 
-    def process_form(self, form, race_id):
+    def process_form(self, forms):
         processed_form = []
-        for dog_form in form:
-            # dog_id = dog_form["dogId"]
-            for historical_run in dog_form["form"]:
-                historical_run["currentRaceId"] = race_id
-                # historical_run["dogId"] = dog_id
+        filtered = [form for form in forms if form.get("boxNumber") is not None]
+        for form in filtered:
+            for historical_run in form["form"]:
                 processed_form.append(historical_run)
         return processed_form
+
+    def process_stats(self, form):
+        processed_stats = []
+        for dog_form in form:
+            stats = {
+                "dogId": dog_form["dogId"],
+                "form_summary": dog_form["formSummary"],
+                "form_statistics": dog_form["formStatistics"],
+            }
+            processed_stats.append(Utils.flatten_dict(stats))
+        return processed_stats
 
     def process_race_document(self, race):
         race_info = self.flatten_race_info(race)
         race_id = race_info["raceId"]
         race_df = pd.DataFrame([race_info])
-        runs_df = pd.DataFrame(self.process_runs(race["runs"], race_id))
-        form_df = pd.DataFrame(self.process_form(race["form"], race_id))
-        return {"race_df": race_df, "runs_df": runs_df, "form_df": form_df}
+        runs_df = pd.DataFrame(self.process_runs(race["runs"]))
+        form_df = pd.DataFrame(self.process_form(race["form"]))
+        stats_df = pd.DataFrame(self.process_stats(race["form"]))
+        return {"race_df": race_df, "runs_df": runs_df, "form_df": form_df, "stats_df": stats_df}
 
     def transform(self, races):
         races_df = []
