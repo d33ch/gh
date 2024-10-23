@@ -8,64 +8,11 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
     def fit(self, X, y=None):
         return self
 
-    def flatten_race_info(self, race_doc):
-        race_info = {
-            k: v
-            for k, v in race_doc.items()
-            if k
-            not in [
-                "exoticBetType",
-                "positionInRunning",
-                "resultsSummary",
-                "tabTipRunners",
-                "splitTimes",
-                "dividends",
-                "runs",
-                "form",
-            ]
-        }
-        race_info["_id"] = str(race_info["_id"])
-        return race_info
-
-    def process_runs(self, runs):
-        processed_runs = []
-        filtered = [run for run in runs if run.get("boxNumber") is not None]
-        for run in filtered:
-            processed_runs.append(run)
-        return processed_runs
-
-    def process_form(self, forms):
-        processed_form = []
-        filtered = [form for form in forms if form.get("boxNumber") is not None]
-        for form in filtered:
-            for historical_run in form["form"]:
-                processed_form.append(historical_run)
-        return processed_form
-
-    def process_stats(self, form):
-        processed_stats = []
-        for dog_form in form:
-            stats = {
-                "dogId": dog_form["dogId"],
-                "form_summary": dog_form["formSummary"],
-                "form_statistics": dog_form["formStatistics"],
-            }
-            processed_stats.append(Utils.flatten_dict(stats))
-        return processed_stats
-
-    def process_race_document(self, race):
-        race_info = self.flatten_race_info(race)
-        race_id = race_info["raceId"]
-        race_df = pd.DataFrame([race_info])
-        runs_df = pd.DataFrame(self.process_runs(race["runs"]))
-        form_df = pd.DataFrame(self.process_form(race["form"]))
-        stats_df = pd.DataFrame(self.process_stats(race["form"]))
-        return {"race_df": race_df, "runs_df": runs_df, "form_df": form_df, "stats_df": stats_df}
-
     def transform(self, races):
         races_df = []
         for race in races:
-            races_df.append(self.process_race_document(race))
+            if race.get("prizeMoneyTotal") > 0:
+                races_df.append(self.process_race_document(race))
         return races_df
 
         X = pd.DataFrame(races)
@@ -93,22 +40,12 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         # df["run_resultTime"] = df["run_resultTime"].apply(lambda x: Utils.encode_missing_value(x, -1))
         # df["run_resultMargin"] = df["run_resultMargin"].apply(lambda x: Utils.encode_missing_value(x, -1))
 
-        X["form_bestFinishTrackAndDistance"] = X["form_bestFinishTrackAndDistance"].apply(
-            lambda x: Utils.encode_missing_value(x, -1)
-        )
+        X["form_bestFinishTrackAndDistance"] = X["form_bestFinishTrackAndDistance"].apply(lambda x: Utils.encode_missing_value(x, -1))
         X["form_averageSpeed"] = X["form_averageSpeed"].apply(lambda x: Utils.encode_missing_value(x, -1))
-        X["form_bestFinishTrackDistance"] = X["form_bestFinishTrackDistance"].apply(
-            lambda x: Utils.encode_missing_value(x, -1)
-        )
-        X["form_bestFirstSplitTrackDistance"] = X["form_bestFirstSplitTrackDistance"].apply(
-            lambda x: Utils.encode_missing_value(x, -1)
-        )
-        X["form_avgFirstSplitTrackDistance"] = X["form_avgFirstSplitTrackDistance"].apply(
-            lambda x: Utils.encode_missing_value(x, -1)
-        )
-        X["form_bestFirstSplitTrackDistanceBox"] = X["form_bestFirstSplitTrackDistanceBox"].apply(
-            lambda x: Utils.encode_missing_value(x, -1)
-        )
+        X["form_bestFinishTrackDistance"] = X["form_bestFinishTrackDistance"].apply(lambda x: Utils.encode_missing_value(x, -1))
+        X["form_bestFirstSplitTrackDistance"] = X["form_bestFirstSplitTrackDistance"].apply(lambda x: Utils.encode_missing_value(x, -1))
+        X["form_avgFirstSplitTrackDistance"] = X["form_avgFirstSplitTrackDistance"].apply(lambda x: Utils.encode_missing_value(x, -1))
+        X["form_bestFirstSplitTrackDistanceBox"] = X["form_bestFirstSplitTrackDistanceBox"].apply(lambda x: Utils.encode_missing_value(x, -1))
         X["form_careerPrizeMoney"] = X["form_careerPrizeMoney"].apply(lambda x: Utils.encode_missing_value(x, 0))
 
         X = X.drop("startTime", axis=1)
@@ -144,3 +81,60 @@ class DataPreprocessor(BaseEstimator, TransformerMixin):
         X["run_isWinner"] = (X["run_place"] == 1).astype(int)
 
         return X
+
+    def flatten_race_info(self, race_doc):
+        race_info = {
+            k: v
+            for k, v in race_doc.items()
+            if k
+            not in [
+                "exoticBetType",
+                "positionInRunning",
+                "resultsSummary",
+                "tabTipRunners",
+                "splitTimes",
+                "dividends",
+                "runs",
+                "form",
+            ]
+        }
+        race_info["_id"] = str(race_info["_id"])
+        return race_info
+
+    def process_runs(self, runs):
+        processed_runs = []
+        filtered = [run for run in runs if run.get("boxNumber") is not None]
+        for run in filtered:
+            processed_runs.append(run)
+        return processed_runs
+
+    def process_form(self, forms):
+        processed_form = []
+        for form in forms:
+            for historical_run in form["form"]:
+                processed_form.append(historical_run)
+        return processed_form
+
+    def process_stats(self, form):
+        processed_stats = []
+        for dog_form in form:
+            stats = {
+                "dogId": dog_form["dogId"],
+                "form_summary": dog_form["formSummary"],
+                "form_statistics": dog_form["formStatistics"],
+            }
+            processed_stats.append(Utils.flatten_dict(stats))
+        return processed_stats
+
+    def process_race_document(self, race):
+        race_info = self.flatten_race_info(race)
+        processed_runs = self.process_runs(race["runs"])
+        filtered_forms = [form for form in race["form"] if any(form["dogId"] == run["dogId"] for run in processed_runs)]
+        processed_forms = self.process_form(filtered_forms)
+        processed_stats = self.process_stats(filtered_forms)
+        return {
+            "race_df": pd.DataFrame([race_info]),
+            "runs_df": pd.DataFrame(processed_runs),
+            "form_df": pd.DataFrame(processed_forms),
+            "stats_df": pd.DataFrame(processed_stats),
+        }
