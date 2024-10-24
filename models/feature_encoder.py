@@ -6,7 +6,20 @@ from utils import Utils
 
 class FeatureEncoder(BaseEstimator, TransformerMixin):
     def __init__(self):
-        self.categorical_columns = ["colourCode", "trackCode", "raceTypeCode", "incomingGrade", "sex"]
+        self.categorical_columns = [
+            "auth_code",
+            "colourCode",
+            "trackCode",
+            "raceTypeCode",
+            "incomingGrade",
+            "sex",
+            "meetingIs_month_end",
+            "meetingIs_month_start",
+            "meetingIs_quarter_end",
+            "meetingIs_quarter_start",
+            "meetingIs_year_end",
+            "meetingIs_year_start",
+        ]
         self.label_encoders = {}
 
     def fit(self, X, y=None):
@@ -44,6 +57,8 @@ class FeatureEncoder(BaseEstimator, TransformerMixin):
         X["form_summary_bestFirstSplitTrackDistanceBox"] = X["form_summary_bestFirstSplitTrackDistanceBox"].apply(
             lambda x: Utils.encode_missing_value(x, -1)
         )
+        X["place"] = X["place"].apply(lambda x: Utils.encode_missing_value(x, -1))
+        X["resultTime"] = X["resultTime"].apply(lambda x: Utils.encode_missing_value(x, -1))
         X.loc[X["avg_weight_last_5"].notna(), "weightInKg"] = X["avg_weight_last_5"]
         return X.reset_index(drop=True)
 

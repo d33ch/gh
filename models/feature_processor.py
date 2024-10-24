@@ -54,16 +54,13 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         form_df["meetingDate"] = pd.to_datetime(form_df["meetingDate"])
         form_df["place"] = form_df["place"].apply(self.encode_race_result)
         form_df_sorted = form_df.sort_values(["dogId", "meetingDate"], ascending=[True, False])
-        # form_df_sorted["speed"] = form_df_sorted["distance"] / form_df_sorted["resultTime"]
-        # form_df_sorted["time_per_100m"] = (form_df_sorted["resultTime"] / form_df_sorted["distance"]) * 100
-        # form_df_sorted["distance_category"] = form_df_sorted["distance"].apply(self.distance_category)
-        group_df = form_df_sorted.groupby("dogId")
-        pir_features = self.calculate_pir(group_df["pir_with_place"])
-        result_features = self.race_finishes_features(group_df)
-        track_features = self.track_distance_features(group_df, track, distance)
-        box_features = self.box_features(group_df, box_numbers_df)
-        dog_features = self.dog_features(group_df, race_date)
-        features = pd.merge(result_features, track_features, on="dogId", how="left")
+        x = form_df_sorted.groupby("dogId")
+        pir_features = self.calculate_pir(x["pir_with_place"])
+        race_result_features = self.race_result_features(x)
+        track_dist_features = self.track_distance_features(x, track, distance)
+        box_features = self.box_features(x, box_numbers_df)
+        dog_features = self.dog_features(x, race_date)
+        features = pd.merge(race_result_features, track_dist_features, on="dogId", how="left")
         features = pd.merge(features, box_features, on="dogId", how="left")
         features = pd.merge(features, dog_features, on="dogId", how="left")
         features = pd.merge(features, pir_features, on="dogId", how="left")
@@ -111,7 +108,7 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
 
     def calculate_track_distance_features(self, x, track_code, distance):
         tr_dist_df = x[(x["trackCode"] == track_code) & (x["distance"] == distance) & (~np.isnan(x["resultTime"]))]
-        distance_df_filtered = x[x["distance"] == distance & (~np.isnan(x["resultTime"]))]
+        distance_df_filtered = x[(x["distance"] == distance) & (~np.isnan(x["resultTime"]))]
         track_distance_num = len(tr_dist_df)
         distance_num_races = len(distance_df_filtered)
         return pd.Series(
@@ -138,54 +135,76 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
             }
         )
 
-    def track_distance_features(self, group_df, track_code, distance):
-        track_features = group_df.apply(lambda x: self.calculate_track_distance_features(x, track_code, distance), include_groups=False)
+    def track_distance_features(self, x, track_code, distance):
+        track_features = x.apply(lambda x: self.calculate_track_distance_features(x, track_code, distance), include_groups=False)
         return track_features
 
-    def box_features(self, group_df, box_numbers_df):
-        feat = group_df.apply(
+    def box_features(self, x, box_numbers_df):
+        feat = x.apply(
             lambda x: self.calculate_box_features(x, box_numbers_df.loc[box_numbers_df["dogId"] == x.name, "boxNumber"].values[0]),
             include_groups=False,
         )
         return feat
 
-    def dog_features(self, group_df, race_date):
+    def dog_features(self, x, race_date):
         feat = pd.DataFrame()
-        weight_features = group_df.apply(self.calculate_dog_features, include_groups=False)
-        rating_features = group_df.apply(self.calculate_rating_features, include_groups=False)
+        weight_features = x.apply(self.calculate_dog_features, include_groups=False)
+        rating_features = x.apply(self.calculate_rating_features, include_groups=False)
         feat = pd.merge(weight_features, rating_features, on="dogId", how="left")
-        feat["days_since_last_race"] = ((race_date - group_df["meetingDate"].first()).dt.total_seconds() / 86400).fillna(0).astype(int)
+        feat["days_since_last_race"] = ((race_date - x["meetingDate"].first()).dt.total_seconds() / 86400).fillna(0).astype(int)
         return feat
 
-    def race_finishes_features(self, group_df):
+    def race_result_features(self, x):
         feat = pd.DataFrame()
-        feat["avg_finish_last_5"] = round(group_df["place"].mean(), 2)
-        feat["median_finish_last_5"] = round(group_df["place"].median(), 2)
-        feat["best_finish_last_5"] = group_df["place"].min()
-        feat["worst_finish_last_5"] = group_df["place"].max()
-        feat["var_finish_last_5"] = group_df["place"].apply(lambda x: round(x.var(), 2) if x.count() >= 2 else 0)
-        feat["avg_finish_last_3"] = group_df["place"].apply(lambda x: round(x.head(3).mean(), 2))
-        feat["median_finish_last_3"] = group_df["place"].apply(lambda x: round(x.head(3).median(), 2))
-        feat["best_finish_last_3"] = group_df["place"].apply(lambda x: round(x.head(3).min(), 2))
-        feat["worst_finish_last_3"] = group_df["place"].apply(lambda x: round(x.head(3).max(), 2))
-        feat["var_finish_last_3"] = group_df["place"].apply(lambda x: round(x.head(3).var(), 2) if x.head(3).count() >= 2 else 0)
-        feat["avg_speed_last_5"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).mean() * 3.6, 2), include_groups=False)
-        feat["max_speed_last_5"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).max() * 3.6, 2), include_groups=False)
-        feat["min_speed_last_5"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).min() * 3.6, 2), include_groups=False)
-        feat["avg_speed_last_3"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).head(3).mean() * 3.6, 2), include_groups=False)
-        feat["max_speed_last_3"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).head(3).max() * 3.6, 2), include_groups=False)
-        feat["min_speed_last_3"] = group_df.apply(lambda x: round((x["distance"] / x["resultTime"]).head(3).min() * 3.6, 2), include_groups=False)
-        feat["win_rate_last_5"] = group_df["place"].agg(lambda x: round((x == 1).mean(), 2))
-        feat["win_rate_last_3"] = group_df["place"].agg(lambda x: round((x == 1).head(3).mean(), 2))
-        feat["top_3_rate_last_5"] = group_df["place"].agg(lambda x: round((x <= 3).mean(), 2))
-        feat["top_3_rate_last_3"] = group_df["place"].agg(lambda x: round((x <= 3).head(3).mean(), 2))
-        feat["performance_trend"] = group_df["place"].apply(self.calculate_performance_trend)
-        margin_features = group_df.apply(self.calculate_margin_features, include_groups=False)
+        feat["performance_trend"] = x["place"].apply(self.calculate_performance_trend)
+        race_result_features = x.apply(self.calculate_race_result_features)
+        margin_features = x.apply(self.calculate_margin_features, include_groups=False)
+        feat = pd.merge(feat, race_result_features, on="dogId", how="left")
         feat = pd.merge(feat, margin_features, on="dogId", how="left")
+        # feat = feat.reset_index(drop=True)
         return feat
 
-    def calculate_dog_features(self, X):
-        weight = X["weightInKg"].dropna()
+    def calculate_race_result_features(self, x):
+        x_last_5 = x[(~np.isnan(x["place"])) & (~np.isnan(x["resultTime"]))]
+        x_last_3 = x.head(3)
+        x_last_3 = x_last_3[(~np.isnan(x_last_3["place"])) & (~np.isnan(x_last_3["resultTime"]))]
+        x_last_5_num = len(x_last_5)
+        x_last_3_num = len(x_last_3)
+        return pd.Series(
+            {
+                "num_races_last_5": x_last_5_num,
+                "avg_finish_last_5": round(x_last_5["place"].mean(), 2) if x_last_5_num > 0 else 0,
+                "median_finish_last_5": round(x_last_5["place"].median(), 2) if x_last_5_num > 0 else 0,
+                "best_finish_last_5": x_last_5["place"].min() if x_last_5_num > 0 else 0,
+                "worst_finish_last_5": x_last_5["place"].max() if x_last_5_num > 0 else 0,
+                "var_finish_last_5": round(x_last_5["place"].var(), 2) if x_last_5_num > 1 else 0,
+                "avg_speed_last_5": round((x_last_5["distance"] / x_last_5["resultTime"]).mean() * 3.6, 2) if x_last_5_num > 0 else 0,
+                "max_speed_last_5": round((x_last_5["distance"] / x_last_5["resultTime"]).max() * 3.6, 2) if x_last_5_num > 0 else 0,
+                "min_speed_last_5": round((x_last_5["distance"] / x_last_5["resultTime"]).min() * 3.6, 2) if x_last_5_num > 0 else 0,
+                "win_rate_last_5": round((x_last_5["place"] == 1).mean(), 2) if x_last_5_num > 0 else 0,
+                "top_3_rate_last_5": round((x_last_5["place"] <= 3).mean(), 2) if x_last_5_num > 0 else 0,
+                "avg_time_per_100m_last_5": round(((x_last_5["resultTime"] / x_last_5["distance"]) * 100).mean(), 2) if x_last_5_num > 0 else 0,
+                "min_time_per_100m_last_5": round(((x_last_5["resultTime"] / x_last_5["distance"]) * 100).min(), 2) if x_last_5_num > 0 else 0,
+                "max_time_per_100m_last_5": round(((x_last_5["resultTime"] / x_last_5["distance"]) * 100).max(), 2) if x_last_5_num > 0 else 0,
+                "num_races_last_3": x_last_3_num,
+                "avg_finish_last_3": round(x_last_3["place"].mean(), 2) if x_last_3_num > 0 else 0,
+                "median_finish_last_3": round(x_last_3["place"].median(), 2) if x_last_3_num > 0 else 0,
+                "best_finish_last_3": round(x_last_3["place"].min(), 2) if x_last_3_num > 0 else 0,
+                "worst_finish_last_3": round(x_last_3["place"].max(), 2) if x_last_3_num > 0 else 0,
+                "var_finish_last_3": round(x_last_3["place"].var(), 2) if x_last_3_num > 1 else 0,
+                "avg_speed_last_3": round((x_last_3["distance"] / x_last_3["resultTime"]).mean() * 3.6, 2) if x_last_3_num > 0 else 0,
+                "max_speed_last_3": round((x_last_3["distance"] / x_last_3["resultTime"]).max() * 3.6, 2) if x_last_3_num > 0 else 0,
+                "min_speed_last_3": round((x_last_3["distance"] / x_last_3["resultTime"]).min() * 3.6, 2) if x_last_3_num > 0 else 0,
+                "win_rate_last_3": round((x_last_3["place"] == 1).mean(), 2) if x_last_3_num > 0 else 0,
+                "top_3_rate_last_3": round((x_last_3["place"] <= 3).mean(), 2) if x_last_3_num > 0 else 0,
+                "avg_time_per_100m_last_3": round(((x_last_3["resultTime"] / x_last_3["distance"]) * 100).mean(), 2) if x_last_3_num > 0 else 0,
+                "min_time_per_100m_last_3": round(((x_last_3["resultTime"] / x_last_3["distance"]) * 100).min(), 2) if x_last_3_num > 0 else 0,
+                "max_time_per_100m_last_3": round(((x_last_3["resultTime"] / x_last_3["distance"]) * 100).max(), 2) if x_last_3_num > 0 else 0,
+            }
+        )
+
+    def calculate_dog_features(self, x):
+        weight = x["weightInKg"].dropna()
         weight_num = len(weight)
         return pd.Series(
             {
@@ -225,7 +244,7 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         return pd.Series(
             {
                 "dogId": x["dogId"],
-                "dog_age_days": int((race_date - pd.to_datetime(x["dateWhelped"])).total_seconds() / 86400),
+                "dog_age_days": int((race_date - pd.to_datetime(x["dateWhelped"])).total_seconds() / 86400) if x["dateWhelped"] != None else -1,
             }
         )
 
@@ -284,58 +303,27 @@ class FeatureProcessor(BaseEstimator, TransformerMixin):
         pir_lists = pir_series.apply(self.split_and_encode_pir)
         pir_list_flat = np.array([item for sublist in pir_lists for item in sublist])
         pir_num = len(pir_list_flat)
-        if pir_num == 0:
-            return pd.Series(
-                {
-                    "pir_avg": 0,
-                    "pir_volatility": 0,
-                    "pir_starting_avg": 0,
-                    "pir_improvement_avg": 0,
-                    "pir_best": 0,
-                    "pir_worst": 0,
-                    "pir_range": 0,
-                    "pir_median": 0,
-                    "pir_early_avg": 0,
-                    "pir_late_avg": 0,
-                    "pir_consistency": 0,
-                    "pir_top3_ratio": 0,
-                    "pir_trend": 0,
-                    "pir_trend_per_race_avg": 0,
-                }
-            )
-        pir_avg = round(np.mean(pir_list_flat), 2)
-        pir_volatility = round(np.std(pir_list_flat), 2)
-        pir_starting_avg = round(np.mean([pir[-1] for pir in pir_lists]), 2)
-        pir_improvement_avg = round(np.mean([pir[-1] - pir[0] for pir in pir_lists]), 2)
-        pir_best = np.min(pir_list_flat)
-        pir_worst = np.max(pir_list_flat)
-        pir_range = pir_worst - pir_best
-        pir_consistency = round(1 - (max(pir_list_flat) - min(pir_list_flat)) / pir_num, 2)
-        pir_median = np.median(pir_list_flat)
-        pir_early_avg = round(np.mean([self.half_array_mean(pir, Direction.EARLY) for pir in pir_lists]), 1)
-        pir_late_avg = round(np.mean([self.half_array_mean(pir, Direction.LATE) for pir in pir_lists]), 1)
-        pir_top3_ratio = round(sum(1 for pir in pir_list_flat if pir <= 3) / pir_num, 2)
-        pir_trend = round(0 if pir_num == 1 else stats.linregress(np.arange(pir_num), pir_list_flat).slope, 2)
-        pir_trend_per_race_avg = round(
-            np.mean([0 if len(set(pir)) == 1 else stats.linregress(np.arange(len(pir)), pir).slope for pir in pir_lists]),
-            2,
-        )
         return pd.Series(
             {
-                "pir_avg": pir_avg,
-                "pir_volatility": pir_volatility,
-                "pir_starting_avg": pir_starting_avg,
-                "pir_improvement_avg": pir_improvement_avg,
-                "pir_best": pir_best,
-                "pir_worst": pir_worst,
-                "pir_range": pir_range,
-                "pir_median": pir_median,
-                "pir_early_avg": pir_early_avg,
-                "pir_late_avg": pir_late_avg,
-                "pir_consistency": pir_consistency,
-                "pir_top3_ratio": pir_top3_ratio,
-                "pir_trend": pir_trend,
-                "pir_trend_per_race_avg": pir_trend_per_race_avg,
+                "pir_avg": round(np.mean(pir_list_flat), 2) if pir_num > 0 else 0,
+                "pir_volatility": round(np.std(pir_list_flat), 2) if pir_num > 0 else 0,
+                "pir_starting_avg": round(np.mean([pir[-1] for pir in pir_lists]), 2) if pir_num > 0 else 0,
+                "pir_improvement_avg": round(np.mean([pir[-1] - pir[0] for pir in pir_lists]), 2) if pir_num > 0 else 0,
+                "pir_best": np.min(pir_list_flat) if pir_num > 0 else 0,
+                "pir_worst": np.max(pir_list_flat) if pir_num > 0 else 0,
+                "pir_range": (np.min(pir_list_flat) - np.max(pir_list_flat)) if pir_num > 0 else 0,
+                "pir_median": np.median(pir_list_flat) if pir_num > 0 else 0,
+                "pir_early_avg": round(np.mean([self.half_array_mean(pir, Direction.EARLY) for pir in pir_lists]), 1) if pir_num > 0 else 0,
+                "pir_late_avg": round(np.mean([self.half_array_mean(pir, Direction.LATE) for pir in pir_lists]), 1) if pir_num > 0 else 0,
+                "pir_consistency": round(1 - (max(pir_list_flat) - min(pir_list_flat)) / pir_num, 2) if pir_num > 0 else 0,
+                "pir_top3_ratio": round(sum(1 for pir in pir_list_flat if pir <= 3) / pir_num, 2) if pir_num > 0 else 0,
+                "pir_win_ratio": round(sum(1 for pir in pir_list_flat if pir == 1) / pir_num, 2) if pir_num > 0 else 0,
+                "pir_trend": round(0 if pir_num == 1 else stats.linregress(np.arange(pir_num), pir_list_flat).slope, 2) if pir_num > 0 else 0,
+                "pir_trend_per_race_avg": (
+                    round(np.mean([0 if len(set(pir)) == 1 else stats.linregress(np.arange(len(pir)), pir).slope for pir in pir_lists]), 2)
+                    if pir_num > 0
+                    else 0
+                ),
             }
         )
 

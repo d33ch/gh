@@ -41,20 +41,22 @@ BOX_FEATURES = [
     "box_avg_finish_last_5",
 ]
 
-FINISHES_FEATURES = [
+RACE_RESULT_FEATURES = [
+    "num_races_last_5",
     "avg_finish_last_5",
     "median_finish_last_5",
     "best_finish_last_5",
     "worst_finish_last_5",
     "var_finish_last_5",
+    "win_rate_last_5",
+    "top_3_rate_last_5",
+    "num_races_last_3",
     "avg_finish_last_3",
     "median_finish_last_3",
     "best_finish_last_3",
     "worst_finish_last_3",
     "var_finish_last_3",
-    "win_rate_last_5",
     "win_rate_last_3",
-    "top_3_rate_last_5",
     "top_3_rate_last_3",
     "performance_trend",
 ]
@@ -63,9 +65,15 @@ SPEED_FEATURES = [
     "avg_speed_last_5",
     "max_speed_last_5",
     "min_speed_last_5",
+    "avg_time_per_100m_last_5",
+    "min_time_per_100m_last_5",
+    "max_time_per_100m_last_5",
     "avg_speed_last_3",
     "max_speed_last_3",
     "min_speed_last_3",
+    "avg_time_per_100m_last_3",
+    "min_time_per_100m_last_3",
+    "max_time_per_100m_last_3",
 ]
 
 MARGIN_FEATURES = [
@@ -200,7 +208,7 @@ ALL_FEATURES = (
     + DOG_FEATURES
     + DOG_LAST_FEATURES
     + BOX_FEATURES
-    + FINISHES_FEATURES
+    + RACE_RESULT_FEATURES
     + SPEED_FEATURES
     + MARGIN_FEATURES
     + TRACK_DISTANCE_FEATURES
